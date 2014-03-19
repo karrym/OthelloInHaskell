@@ -9,10 +9,6 @@ import Control.Monad.Trans.State
 
 data Stone = Black | White deriving (Eq, Show)
 
-revSt :: Stone -> Stone
-revSt Black = White
-revSt White = Black
-
 toChar :: Stone -> Char
 toChar Black = 'X'
 toChar White = 'O'
@@ -46,9 +42,6 @@ board = [((width `div` 2 - 1, height `div` 2 - 1), White),
          ((width `div` 2 - 1, height `div` 2), Black),
          ((width `div` 2, height `div` 2 - 1), Black),
          ((width `div` 2, height `div` 2), White)]
-
-isInside :: Pos -> Bool
-isInside (x, y) = x >= 0 && x < width && y >= 0 && y < height
 
 addv :: Vec -> Vec -> Vec
 addv (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
