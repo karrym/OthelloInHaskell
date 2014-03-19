@@ -154,4 +154,4 @@ mainLoop = do
                     else mainLoop
 
 main :: IO ()
-main = runStateT (mainLoop >> showMap) board >>= print
+main = print =<< fst <$> runStateT (mainLoop >> showMap) board
