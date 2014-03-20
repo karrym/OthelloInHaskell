@@ -1,6 +1,7 @@
 
 module Main where
 
+import Data.List
 import System.IO
 import Control.Monad
 import Control.Applicative
@@ -32,10 +33,10 @@ height :: Int
 height = 8
 
 widths :: [Int]
-widths = init [0..width]
+widths = [0 .. width - 1]
 
 heights :: [Int]
-heights = init [0..height]
+heights = [0 .. height - 1]
 
 board :: Board
 board = [((width `div` 2 - 1, height `div` 2 - 1), White),
@@ -50,21 +51,18 @@ putStAt :: Stone -> Pos -> Action ()
 putStAt s p = get >>= put . put' where
     put' [] = []
     put' ((pos, st):xs) = if p == pos
-                             then (pos, s):xs
+                             then (pos, s) : xs
                              else (pos, st) : put' xs
 
 putable :: Stone -> Board -> [Pos]
 putable s b = do
         x <- widths
         y <- heights
-        guard $ isSpace (x, y) b && fst (runState (putStone s (x, y) False) b)
+        guard $ isSpace (x, y) b && evalState (putStone s (x, y) False) b
         return $ (x, y)
 
 score :: Stone -> Board -> Int
-score _ [] = 0
-score s ((_, st):xs) = if s == st
-                           then 1 + score s xs
-                           else score s xs
+score s = foldl' (\n (_, st) -> if s == st then n + 1 else n) 0
 
 isSpace :: Pos -> Board -> Bool
 isSpace p = not . elem p . map fst 
@@ -90,25 +88,29 @@ putStoneTo s' p' v' set' = put' s' (p' `addv` v') v' set' [] where
 
 putStone :: Stone -> Pos -> Bool -> Action Bool
 putStone s p set = do
-        res <- or <$> mapM (flip (putStoneTo s p) set) vectors
-        if res
-            then if set
-                     then modify ((p, s):) >> return True
-                     else return True
-            else return False
+        when set $ modify ((p, s):)
+        or <$> mapM (flip (putStoneTo s p) set) vectors
+
+putLine :: IO ()
+putLine = do
+        putStr "   -"
+        mapM_ (const $ putStr "----") widths
+        putChar '\n'
 
 showBoard :: Board -> IO ()
 showBoard b = do
-        putChar ' '
-        mapM_ (putStr . show) widths
+        putStr "   "
+        mapM_ (\n -> putStr "  " >> putStr (show n) >> putChar ' ') widths
         putChar '\n'
+        putLine
         forM_ heights $ \y -> do
-            putStr . show $ y
+            putStr $ " " ++ show y ++ " |"
             (forM_ widths $ \x -> do
             if isSpace (x, y) b
-                then putChar ' '
-                else putChar . toChar $ getStone (x, y) b)
+                then putStr "   |"
+                else putStr $ ' ':toChar (getStone (x, y) b):" |")
             putChar '\n'
+            putLine
 
 showMap :: ActionIO ()
 showMap = get >>= liftIO . showBoard
@@ -154,4 +156,4 @@ mainLoop = do
                     else mainLoop
 
 main :: IO ()
-main = print =<< fst <$> runStateT (mainLoop >> showMap) board
+main = print =<< evalStateT (mainLoop >>= \a ->  showMap >> return a) board
